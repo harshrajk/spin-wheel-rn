@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "types": ["react", "react-native"],
+    "baseUrl": ".",
+    "paths": {
+      "@acme/wheel-core": ["../wheel-core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
