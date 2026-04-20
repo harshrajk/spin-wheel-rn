@@ -3,11 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "outDir": "dist",
-    "types": ["react", "react-native"],
-    "baseUrl": ".",
-    "paths": {
-      "@acme/wheel-core": ["../wheel-core/src/index.ts"]
-    }
+    "types": ["react", "react-native"]
   },
   "include": ["src"]
 }

@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import { SafeAreaView, StyleSheet, Text, View, Pressable } from "react-native";
-import { SpinWheel, type SpinWheelRef } from "@acme/wheel-react-native";
+import { SpinWheel, type SpinWheelRef } from "spin-wheel-react-native";
 
 const segments = [
   { id: "coins-10", label: "10 Coins", weight: 4 },

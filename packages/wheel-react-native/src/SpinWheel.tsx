@@ -6,7 +6,7 @@ import {
   type SpinRequest,
   type SpinResult,
   type WheelSegment,
-} from "@acme/wheel-core";
+} from "spin-wheel-core";
 import React, {
   forwardRef,
   useCallback,

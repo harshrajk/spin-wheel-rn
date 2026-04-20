@@ -7,4 +7,4 @@ export type {
   SpinWheelRef,
   WheelError,
 } from "./types";
-export type { SpinRequest, SpinResult, WheelSegment } from "@acme/wheel-core";
+export type { SpinRequest, SpinResult, WheelSegment } from "spin-wheel-core";

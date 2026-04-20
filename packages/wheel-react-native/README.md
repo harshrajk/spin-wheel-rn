@@ -1,11 +1,11 @@
-# @acme/wheel-react-native
+# spin-wheel-react-native
 
 React Native spin wheel component for Android and iOS.
 
 ## Install
 
 ```bash
-npm install @acme/wheel-react-native react-native-reanimated react-native-gesture-handler react-native-svg
+npm install spin-wheel-react-native react-native-reanimated react-native-gesture-handler react-native-svg
 ```
 
 ## Usage
@@ -13,7 +13,7 @@ npm install @acme/wheel-react-native react-native-reanimated react-native-gestur
 ```tsx
 import React, { useRef } from "react";
 import { Button, View } from "react-native";
-import { SpinWheel, type SpinWheelRef } from "@acme/wheel-react-native";
+import { SpinWheel, type SpinWheelRef } from "spin-wheel-react-native";
 
 export function Example() {
   const ref = useRef<SpinWheelRef>(null);

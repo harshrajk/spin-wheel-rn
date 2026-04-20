@@ -1,11 +1,11 @@
-# @acme/wheel-core
+# spin-wheel-core
 
 Pure TypeScript utilities for spin wheel validation, winner resolution, and rotation planning.
 
 ## Install
 
 ```bash
-npm install @acme/wheel-core
+npm install spin-wheel-core
 ```
 
 ## Exports

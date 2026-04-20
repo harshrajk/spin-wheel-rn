@@ -1,5 +1,5 @@
 {
-  "name": "@acme/wheel-core",
+  "name": "spin-wheel-core",
   "version": "0.1.0",
   "description": "Pure spin wheel logic for deterministic winner selection and rotation planning.",
   "main": "dist/index.cjs",

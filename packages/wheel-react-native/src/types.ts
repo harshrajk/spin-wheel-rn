@@ -3,7 +3,7 @@ import type {
   SpinRequest,
   SpinResult,
   WheelSegment,
-} from "@acme/wheel-core";
+} from "spin-wheel-core";
 import type { ReactNode } from "react";
 
 export type SegmentLabelContext<TMeta = unknown> = {

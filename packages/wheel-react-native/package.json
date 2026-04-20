@@ -1,5 +1,5 @@
 {
-  "name": "@acme/wheel-react-native",
+  "name": "spin-wheel-react-native",
   "version": "0.1.0",
   "description": "React Native spin wheel component for iOS and Android.",
   "main": "dist/index.cjs",
@@ -11,7 +11,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --external react,react-native,react-native-reanimated,react-native-gesture-handler,react-native-svg,@acme/wheel-core",
+    "build": "tsup src/index.ts --format esm,cjs --dts --external react,react-native,react-native-reanimated,react-native-gesture-handler,react-native-svg,spin-wheel-core",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "keywords": [
@@ -29,7 +29,7 @@
     "react-native-svg": ">=15.0.0"
   },
   "dependencies": {
-    "@acme/wheel-core": "0.1.0"
+    "spin-wheel-core": "0.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.5",
