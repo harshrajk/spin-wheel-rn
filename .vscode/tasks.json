@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "validate-package",
+			"type": "shell",
+			"command": "npm run build && npm pack --dry-run",
+			"isBackground": false
+		},
+		{
+			"label": "validate-publish-readiness",
+			"type": "shell",
+			"command": "npm run typecheck && npm test && npm run build && npm pack --dry-run",
+			"isBackground": false
+		},
+		{
+			"label": "parse-check-spinwheel",
+			"type": "shell",
+			"command": "npx esbuild src/components/SpinWheel.tsx --bundle --format=esm --platform=node --outfile=/tmp/spinwheel.js",
+			"isBackground": false
+		},
+		{
+			"label": "validate-publish-readiness-2",
+			"type": "shell",
+			"command": "npm run typecheck && npm test && npm run build && npm pack --dry-run",
+			"isBackground": false
+		}
+	]
+}

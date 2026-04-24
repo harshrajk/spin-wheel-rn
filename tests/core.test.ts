@@ -4,7 +4,7 @@ import {
   resolveWinnerIndex,
   validateSegments,
   type WheelSegment,
-} from "../src";
+} from "../src/core";
 
 const segments: WheelSegment[] = [
   { id: "a", label: "A", weight: 1 },

@@ -115,19 +115,20 @@ type ConfettiPieceProps = {
 };
 
 function ConfettiPiece({ piece, progress }: ConfettiPieceProps) {
-  const animatedStyle = useAnimatedStyle(() => {
+  const animatedStyle = useAnimatedStyle<ViewStyle>(() => {
     const normalized = piece.delay >= 1 ? 1 : Math.max(0, (progress.value - piece.delay) / (1 - piece.delay));
     const translateX = piece.velocityX * normalized;
     const translateY = piece.velocityY * normalized + 0.5 * piece.gravity * normalized * normalized;
+    const transform: NonNullable<ViewStyle["transform"]> = [
+      { translateX },
+      { translateY },
+      { rotate: `${piece.spinDeg * normalized}deg` },
+      { scale: interpolate(normalized, [0, 0.1, 1], [0.8, 1, 0.65]) },
+    ];
 
     return {
       opacity: interpolate(normalized, [0, 0.1, 0.85, 1], [0, 1, 1, 0]),
-      transform: [
-        { translateX },
-        { translateY },
-        { rotate: `${piece.spinDeg * normalized}deg` },
-        { scale: interpolate(normalized, [0, 0.1, 1], [0.8, 1, 0.65]) },
-      ],
+      transform,
     };
   });
 
@@ -329,8 +330,7 @@ const SpinWheelInner = <TMeta,>(
       AccessibilityInfo.announceForAccessibility?.(
         `Spin complete. Winner is ${String(result.winner.label)}.`
       );
-      onSpinEnd?.({ ...result, timestamp: Date.now() });
-      resolve(result);
+      onSpinEnd?.({ ...result, timestamp: Date.now() });  
     },
     [confettiConfig, confettiProgress, isSpinning, onSpinEnd, segments]
   );

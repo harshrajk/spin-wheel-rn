@@ -1,126 +1,149 @@
 # spin-wheel-react-native
 
-A highly customizable React Native spin wheel component for iOS and Android.
+A customizable React Native spin wheel component for iOS and Android with weighted winner selection, gesture spin, and optional confetti.
 
-## Features
-
-- 🎡 Deterministic winner selection with weighted segments
-- 🎨 Fully customizable styling and rendering
-- 📱 Works on iOS and Android
-- ⚡ Smooth animations powered by React Native Reanimated
-- 👆 Touch gestures with optional flick-to-spin
-- 🔧 TypeScript support
-
-## Install
+## Installation
 
 ```bash
 npm install spin-wheel-react-native react-native-reanimated react-native-gesture-handler react-native-svg
 ```
 
-## Quick Start
+> **Expo users:** Dependencies are auto-configured. No extra setup needed.
+>
+> **Bare React Native:** Add `react-native-reanimated/plugin` as the last entry in `babel.config.js` plugins.
+
+## Setup
+
+Wrap your app root with `GestureHandlerRootView`. In bare RN, also add the gesture handler import to the top of your entry file.
 
 ```tsx
-import React, { useRef } from "react";
-import { Button, View } from "react-native";
-import { SpinWheel, type SpinWheelRef } from "spin-wheel-react-native";
+// index.js (bare RN only)
+import "react-native-gesture-handler";
+```
 
-export function Example() {
-  const ref = useRef<SpinWheelRef>(null);
+```tsx
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+export default function App() {
   return (
-    <View>
-      <SpinWheel
-        ref={ref}
-        segments={[
-          { id: "1", label: "10 Coins", weight: 1 },
-          { id: "2", label: "Try Again", weight: 3 },
-          { id: "3", label: "50 Coins", weight: 1 },
-          { id: "4", label: "Bonus", weight: 1 }
-        ]}
-        allowGestureSpin
-        flickEnabled
-        onSpinEnd={(event) => {
-          console.log("Winner:", event.winner.label);
-        }}
-      />
-
-      <Button
-        title="Spin"
-        onPress={() => {
-          void ref.current?.spin({ random: { strategy: "weighted" } });
-        }}
-      />
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* your app */}
+    </GestureHandlerRootView>
   );
 }
 ```
 
-## Core Exports
-
-The package exports core logic utilities for server-side winner calculation:
+## Usage
 
 ```tsx
-import {
-  resolveWinnerIndex,
-  planRotation,
-  validateSegments,
-  type WheelSegment,
-  type SpinRequest,
-  type SpinResult,
-} from "spin-wheel-react-native";
+import React, { useRef } from "react";
+import { Pressable, Text } from "react-native";
+import { SpinWheel, type SpinWheelRef } from "spin-wheel-react-native";
+
+const segments = [
+  { id: "coins-10", label: "10 Coins", weight: 4 },
+  { id: "coins-50", label: "50 Coins", weight: 2 },
+  { id: "coins-100", label: "100 Coins", weight: 1 },
+  { id: "retry",    label: "Retry",     weight: 3 },
+  { id: "gift",     label: "Gift",      weight: 1 },
+  { id: "bonus",    label: "Bonus",     weight: 1 },
+];
+
+export default function GameScreen() {
+  const wheelRef = useRef<SpinWheelRef>(null);
+
+  return (
+    <>
+      <SpinWheel
+        ref={wheelRef}
+        size={320}
+        segments={segments}
+        flickEnabled
+        confettiOnWin
+        onSpinEnd={(event) => console.log("Winner:", event.winner.label)}
+      />
+
+      <Pressable onPress={() => wheelRef.current?.spin()}>
+        <Text>Spin</Text>
+      </Pressable>
+    </>
+  );
+}
 ```
 
-## Testing
+## Props
 
-Run tests:
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `segments` | `WheelSegment[]` | required | Wheel segments. |
+| `size` | `number` | `320` | Wheel diameter in pixels. |
+| `innerRadiusRatio` | `number` | `0` | Center hole size as a ratio of radius (0–1). |
+| `pointerPosition` | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Where the pointer is anchored. |
+| `initialRotationDeg` | `number` | `0` | Starting rotation angle. |
+| `disabled` | `boolean` | `false` | Disables all spin interactions. |
+| `allowGestureSpin` | `boolean` | `true` | Enables pan gesture detection. |
+| `flickEnabled` | `boolean` | — | Enables velocity-based flick to spin. |
+| `lockWhileSpinning` | `boolean` | `true` | Prevents re-spin while animating. |
+| `confettiOnWin` | `boolean \| WinnerConfettiOptions` | `false` | Plays confetti on spin complete. |
+| `renderSegmentLabel` | `(ctx) => ReactNode` | — | Custom label renderer per segment. |
+| `renderCenterContent` | `() => ReactNode` | — | Custom center overlay. |
+| `renderPointer` | `() => ReactNode` | — | Custom pointer renderer. |
+| `onSpinStart` | `(event) => void` | — | Fired when a spin begins. |
+| `onSpinEnd` | `(event) => void` | — | Fired when spin animation completes. |
+| `onError` | `(error) => void` | — | Fired on validation or runtime errors. |
 
-```bash
-npm test
+## Ref Methods
+
+```ts
+wheelRef.current.spin(request?)   // starts spin, returns Promise<SpinResult>
+wheelRef.current.reset()          // resets to initial angle
+wheelRef.current.stop()           // cancels current animation
+wheelRef.current.isSpinning()     // returns boolean
 ```
 
-## Development
+## Controlling the Winner
 
-Start the Expo demo app:
+```ts
+// Random weighted (default)
+wheelRef.current?.spin();
 
-```bash
+// Seeded deterministic — same seed always picks same winner
+wheelRef.current?.spin({ random: { strategy: "weighted", seed: "session-abc" } });
 
+// Force a specific winner by id
+wheelRef.current?.spin({ winnerId: "gift" });
 
-### Quick Testing with Expo
-
-Fastest way to test on iOS/Android - no native build tools required!
-
-```bash
-npm install
-npm run dev
+// Force a specific winner by index
+wheelRef.current?.spin({ winnerIndex: 2 });
 ```
 
-Then:
-- Press `i` to open iOS Simulator (macOS only)
-- Press `a` to open Android Emulator
-- Scan QR code to test on physical device
+## Segments
 
-See [examples/expo-demo/README.md](./examples/expo-demo/README.md) for details.
-
-### Testing with Bare React Native
-
-For production-like environment with full native control:
-
-```bash
-cd examples/bare-rn-demo
-npm install
-npm run ios    # or npm run android
+```ts
+type WheelSegment<TMeta = unknown> = {
+  id: string;          // unique identifier
+  label: string;       // display text
+  weight?: number;     // relative probability (default 1)
+  color?: string;      // segment fill color
+  textColor?: string;  // label color
+  metadata?: TMeta;    // your custom data, returned in SpinResult
+  disabled?: boolean;  // excluded from winner selection
+};
 ```
 
-Requires Xcode (iOS) or Android Studio (Android).
+## Confetti Options
 
-See [examples/bare-rn-demo/README.md](./examples/bare-rn-demo/README.md) for setup guide.
+Pass `confettiOnWin` as `true` for defaults, or pass an options object:
+
+```ts
+confettiOnWin={{
+  durationMs: 1800,   // animation duration
+  pieceCount: 44,     // number of pieces
+  size: 8,            // base piece size in px
+  colors: ["#FFD166", "#EF476F", "#06D6A0"],
+}}
+```
+
 ## License
 
 MIT
-
-
-From each package:
-
-```bash
-npm publish --access public
-```
