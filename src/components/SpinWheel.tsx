@@ -28,10 +28,8 @@ import Animated, {
   interpolate,
   runOnJS,
   useAnimatedStyle,
-  useAnimatedProps,
   useSharedValue,
   withTiming,
-  type Adaptable,
   type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Circle, G, Path, Text as SvgText } from "react-native-svg";
@@ -85,7 +83,6 @@ function buildSectorPath(
 }
 
 const AnimatedView = Animated.createAnimatedComponent(View);
-const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
 
 type SectorLabelProps = {
   x: number;
@@ -93,7 +90,6 @@ type SectorLabelProps = {
   text: string;
   fill: string;
   baseRotationDeg: number;
-  rotation: SharedValue<number>;
 };
 
 type ConfettiPieceModel = {
@@ -151,16 +147,10 @@ function ConfettiPiece({ piece, progress }: ConfettiPieceProps) {
   );
 }
 
-function SectorLabel({ x, y, text, fill, baseRotationDeg, rotation }: SectorLabelProps) {
-  const animatedProps = useAnimatedProps(() => {
-    return {
-      rotation: baseRotationDeg - rotation.value,
-    };
-  });
-
+function SectorLabel({ x, y, text, fill, baseRotationDeg }: SectorLabelProps) {
   return (
-    <AnimatedSvgText
-      animatedProps={animatedProps}
+    <SvgText
+      rotation={baseRotationDeg}
       originX={x}
       originY={y}
       x={x}
@@ -172,7 +162,7 @@ function SectorLabel({ x, y, text, fill, baseRotationDeg, rotation }: SectorLabe
       fill={fill}
     >
       {text}
-    </AnimatedSvgText>
+    </SvgText>
   );
 }
 
@@ -237,6 +227,8 @@ const SpinWheelInner = <TMeta,>(
 ) => {
   const isSpinningRef = useRef(false);
   const lastResultRef = useRef<SpinResult<TMeta> | null>(null);
+  const pendingSpinResolveRef = useRef<((result: SpinResult<TMeta>) => void) | null>(null);
+  const pendingSpinRejectRef = useRef<((reason?: unknown) => void) | null>(null);
   const rotation = useSharedValue(initialRotationDeg);
   const isSpinning = useSharedValue(false);
   const confettiProgress = useSharedValue(1);
@@ -307,18 +299,33 @@ const SpinWheelInner = <TMeta,>(
     };
   });
 
+  const rejectPendingSpin = useCallback((code: string, message: string) => {
+    const reject = pendingSpinRejectRef.current;
+    const error = new Error(message) as Error & { code: string };
+
+    error.code = code;
+    pendingSpinResolveRef.current = null;
+    pendingSpinRejectRef.current = null;
+    reject?.(error);
+  }, []);
+
   const handleSpinComplete = useCallback(
-    (winnerIndex: number, finalAngleDeg: number, durationMs: number, resolve: (result: SpinResult<TMeta>) => void) => {
+    (winnerIndex: number, finalAngleDeg: number, durationMs: number) => {
       const result: SpinResult<TMeta> = {
         winner: segments[winnerIndex],
         winnerIndex,
         finalAngleDeg,
         durationMs,
       };
+      const resolvePending = pendingSpinResolveRef.current;
 
       isSpinningRef.current = false;
       isSpinning.value = false;
       lastResultRef.current = result;
+      pendingSpinResolveRef.current = null;
+      pendingSpinRejectRef.current = null;
+      resolvePending?.(result);
+
       if (confettiConfig) {
         cancelAnimation(confettiProgress);
         confettiProgress.value = 0;
@@ -330,7 +337,7 @@ const SpinWheelInner = <TMeta,>(
       AccessibilityInfo.announceForAccessibility?.(
         `Spin complete. Winner is ${String(result.winner.label)}.`
       );
-      onSpinEnd?.({ ...result, timestamp: Date.now() });  
+      onSpinEnd?.({ ...result, timestamp: Date.now() });
     },
     [confettiConfig, confettiProgress, isSpinning, onSpinEnd, segments]
   );
@@ -376,6 +383,9 @@ const SpinWheelInner = <TMeta,>(
             request,
           });
 
+          pendingSpinResolveRef.current = resolve;
+          pendingSpinRejectRef.current = reject;
+
           rotation.value = withTiming(
             plan.toDeg,
             {
@@ -384,16 +394,18 @@ const SpinWheelInner = <TMeta,>(
             },
             (finished?: boolean) => {
               if (!finished) {
-                isSpinning.value = false;
+                runOnJS(rejectPendingSpin)("SPIN_CANCELLED", "Spin was interrupted before completion.");
                 return;
               }
               isSpinning.value = false;
-              runOnJS(handleSpinComplete)(winnerIndex, plan.toDeg, plan.durationMs, resolve);
+              runOnJS(handleSpinComplete)(winnerIndex, plan.toDeg, plan.durationMs);
             }
           );
         } catch (err) {
           isSpinningRef.current = false;
           isSpinning.value = false;
+          pendingSpinResolveRef.current = null;
+          pendingSpinRejectRef.current = null;
           emitError(err);
           reject(err);
         }
@@ -416,6 +428,9 @@ const SpinWheelInner = <TMeta,>(
   const reset = useCallback(
     (opts?: { animated?: boolean }) => {
       const animated = opts?.animated ?? false;
+      if (isSpinningRef.current) {
+        rejectPendingSpin("SPIN_CANCELLED", "Spin was reset before completion.");
+      }
       if (animated) {
         rotation.value = withTiming(initialRotationDeg, { duration: 350 });
       } else {
@@ -428,14 +443,15 @@ const SpinWheelInner = <TMeta,>(
       cancelAnimation(confettiProgress);
       confettiProgress.value = 1;
     },
-    [confettiProgress, initialRotationDeg, isSpinning, rotation]
+    [confettiProgress, initialRotationDeg, isSpinning, rejectPendingSpin, rotation]
   );
 
   const stop = useCallback(() => {
     cancelAnimation(rotation);
     isSpinningRef.current = false;
     isSpinning.value = false;
-  }, [isSpinning, rotation]);
+    rejectPendingSpin("SPIN_CANCELLED", "Spin was stopped before completion.");
+  }, [isSpinning, rejectPendingSpin, rotation]);
 
   useImperativeHandle(
     ref,
@@ -525,7 +541,6 @@ const SpinWheelInner = <TMeta,>(
                       text={String(sector.segment.label)}
                       fill={sector.segment.textColor ?? "#1A1A1A"}
                       baseRotationDeg={uprightRotation}
-                      rotation={rotation}
                     />
                       );
                     })()

@@ -30,8 +30,7 @@ export function planRotation<TMeta>(args: {
   const winnerSector = sectors[winnerIndex];
 
   const pointerDeg = pointerAngleDeg(pointerPosition);
-  const desiredWheelCenterDeg = normalizeAngleDeg(pointerDeg + 180);
-  const finalNormalized = normalizeAngleDeg(desiredWheelCenterDeg - winnerSector.centerDeg);
+  const finalNormalized = normalizeAngleDeg(pointerDeg - winnerSector.centerDeg);
   const normalizedCurrent = normalizeAngleDeg(currentAngleDeg);
   const distanceToFinal = normalizeAngleDeg(finalNormalized - normalizedCurrent);
 

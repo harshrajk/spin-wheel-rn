@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildSectorGeometry,
+  normalizeAngleDeg,
   planRotation,
+  pointerAngleDeg,
   resolveWinnerIndex,
   validateSegments,
   type WheelSegment,
@@ -63,5 +66,38 @@ describe("planRotation", () => {
     expect(plan.deltaDeg).toBeGreaterThan(360);
     expect(plan.durationMs).toBe(4000);
     expect(plan.toDeg).toBeGreaterThan(plan.fromDeg);
+  });
+
+  it("lands the selected winner under the top pointer", () => {
+    const winnerIndex = 1;
+    const plan = planRotation({
+      segments,
+      winnerIndex,
+      currentAngleDeg: 0,
+      pointerPosition: "top",
+      request: { minRounds: 0, maxRounds: 0, durationMs: 1000 },
+    });
+    const winnerSector = buildSectorGeometry(segments)[winnerIndex];
+    const landedCenter = normalizeAngleDeg(winnerSector.centerDeg + normalizeAngleDeg(plan.toDeg));
+
+    expect(landedCenter).toBe(pointerAngleDeg("top"));
+  });
+
+  it("lands the selected winner under each pointer position", () => {
+    const winnerIndex = 2;
+    const winnerSector = buildSectorGeometry(segments)[winnerIndex];
+
+    for (const pointerPosition of ["top", "right", "bottom", "left"] as const) {
+      const plan = planRotation({
+        segments,
+        winnerIndex,
+        currentAngleDeg: 0,
+        pointerPosition,
+        request: { minRounds: 0, maxRounds: 0, durationMs: 1000 },
+      });
+      const landedCenter = normalizeAngleDeg(winnerSector.centerDeg + normalizeAngleDeg(plan.toDeg));
+
+      expect(landedCenter).toBe(pointerAngleDeg(pointerPosition));
+    }
   });
 });
