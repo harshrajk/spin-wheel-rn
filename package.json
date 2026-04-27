@@ -23,7 +23,10 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --external react,react-native,react-native-reanimated,react-native-gesture-handler,react-native-svg --tsconfig tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "npm start -w examples/expo-demo"
+    "dev": "npm start -w examples/expo-demo",
+    "release:patch": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
   },
   "keywords": [
     "react-native",

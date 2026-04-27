@@ -36,3 +36,6 @@ web-build/
 **/*.xcodeproj/xcuserdata/
 **/*.xcworkspace/xcuserdata/
 **/*.xcuserstate
+
+# local packages
+*.tgz
