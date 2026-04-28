@@ -44,7 +44,6 @@
     "react-native-svg": ">=15.0.0"
   },
   "devDependencies": {
-    "@react-native/babel-preset": "^0.85.2",
     "@types/react": "^18.3.5",
     "@types/react-native": "^0.73.0",
     "react": "^18.3.1",
