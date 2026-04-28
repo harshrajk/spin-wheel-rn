@@ -26,7 +26,13 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
+
+      - name: Ensure Rollup native binary is present (npm optional deps bug workaround)
+        if: runner.os == 'Linux'
+        run: |
+          node -e "require.resolve('@rollup/rollup-linux-x64-gnu')" \
+            || npm i --no-save "@rollup/rollup-linux-x64-gnu@$(node -p \"require('rollup/package.json').version\")"
 
       - name: Typecheck
         run: npm run typecheck
