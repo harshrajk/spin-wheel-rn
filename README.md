@@ -1,6 +1,6 @@
 # spin-wheel-react-native
 
-A customizable React Native spin wheel component for iOS and Android with weighted winner selection, gesture spin, and optional confetti.
+A customizable React Native spin wheel component for iOS and Android with weighted winner selection, gesture spin, built-in themes, pointer bounce animation, and full-screen confetti.
 
 ## Installation
 
@@ -71,34 +71,100 @@ export default function GameScreen() {
 }
 ```
 
+## Themes
+
+Use the `theme` prop for a zero-config styled wheel. Both themes include a built-in teardrop pointer and a center hub with a **SPIN** label.
+
+```tsx
+<SpinWheel segments={segments} theme="minimal" />
+<SpinWheel segments={segments} theme="sleek" />
+```
+
+| Theme | Description |
+| --- | --- |
+| `"minimal"` | Soft pastel palette, light borders, warm hub |
+| `"sleek"` | Dark monochrome palette, sharp contrasts |
+
+Omit `theme` for full manual control over colors.
+
 ## Props
+
+### Core
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `segments` | `WheelSegment[]` | required | Wheel segments. |
+| `segments` | `WheelSegment[]` | **required** | Wheel segments. |
 | `size` | `number` | `320` | Wheel diameter in pixels. |
-| `innerRadiusRatio` | `number` | `0` | Center hole size as a ratio of radius (0–1). |
+| `innerRadiusRatio` | `number` | `0` | Center hole as a ratio of radius (0–1). `0` = solid disc. |
+| `theme` | `"minimal" \| "sleek"` | — | Built-in visual theme. |
 | `pointerPosition` | `"top" \| "right" \| "bottom" \| "left"` | `"top"` | Where the pointer is anchored. |
 | `initialRotationDeg` | `number` | `0` | Starting rotation angle. |
 | `disabled` | `boolean` | `false` | Disables all spin interactions. |
-| `allowGestureSpin` | `boolean` | `true` | Enables pan gesture detection. |
+| `allowGestureSpin` | `boolean` | `true` | Enables pan/flick gesture. |
 | `flickEnabled` | `boolean` | — | Enables velocity-based flick to spin. |
 | `lockWhileSpinning` | `boolean` | `true` | Prevents re-spin while animating. |
-| `confettiOnWin` | `boolean \| WinnerConfettiOptions` | `false` | Plays confetti on spin complete. |
-| `renderSegmentLabel` | `(ctx) => ReactNode` | — | Custom label renderer per segment. |
-| `renderCenterContent` | `() => ReactNode` | — | Custom center overlay. |
-| `renderPointer` | `() => ReactNode` | — | Custom pointer renderer. |
-| `onSpinStart` | `(event) => void` | — | Fired when a spin begins. |
-| `onSpinEnd` | `(event) => void` | — | Fired when spin animation completes. |
-| `onError` | `(error) => void` | — | Fired on validation or runtime errors. |
+| `spinDirection` | `"clockwise" \| "counterclockwise"` | `"clockwise"` | Spin direction. |
+
+### Visual
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `segmentStrokeColor` | `string` | — | Color of divider lines between segments. |
+| `segmentStrokeWidth` | `number` | — | Width of divider lines. |
+| `outerBorderColor` | `string` | — | Outer ring border color. |
+| `outerBorderWidth` | `number` | — | Outer ring border width. |
+| `labelFontSize` | `number` | `12` | Base font size for segment labels. Scales down automatically to fit. |
+| `labelFontWeight` | `string` | `"700"` | Font weight for segment labels. |
+| `disabledSegmentOpacity` | `number` | `0.4` | Opacity for segments marked `disabled: true`. |
+
+### Behavior
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `idleRotationSpeed` | `number` | — | Constant idle spin speed (deg/s) when no spin is active. |
+| `hapticFeedback` | `boolean` | — | Triggers haptic pulse when the pointer passes a segment. |
+| `customEasing` | `(t: number) => number` | — | Custom easing function. Use with `easing: "custom"` in `SpinRequest`. |
+| `pointerBounceEnabled` | `boolean` | `true` | Enables bounce/wobble animation on the pointer as the wheel spins. |
+
+### Confetti
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `confettiOnWin` | `boolean \| WinnerConfettiOptions` | `false` | Plays full-screen confetti when spin completes. |
+
+```ts
+confettiOnWin={{
+  durationMs: 1800,   // animation duration in ms
+  pieceCount: 44,     // number of confetti pieces
+  size: 8,            // base piece size in px
+  colors: ["#FFD166", "#EF476F", "#06D6A0"],
+}}
+```
+
+### Custom Render
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `renderSegmentLabel` | `(ctx: SegmentLabelContext) => ReactNode` | Override the default label for each segment. |
+| `renderCenterContent` | `() => ReactNode` | Render custom content inside the center hub. |
+| `renderPointer` | `() => ReactNode` | Replace the built-in pointer with a custom component. |
+
+### Callbacks
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `onSpinStart` | `(event: SpinStartEvent) => void` | Fired when a spin begins. |
+| `onSpinEnd` | `(event: SpinEndEvent) => void` | Fired when the spin animation completes with the winner. |
+| `onSegmentChange` | `(segment: WheelSegment) => void` | Fired each time the pointer crosses into a new segment. |
+| `onError` | `(error: WheelError) => void` | Fired on validation or runtime errors. |
 
 ## Ref Methods
 
 ```ts
-wheelRef.current.spin(request?)   // starts spin, returns Promise<SpinResult>
-wheelRef.current.reset()          // resets to initial angle
-wheelRef.current.stop()           // cancels current animation
-wheelRef.current.isSpinning()     // returns boolean
+wheelRef.current.spin(request?)   // start a spin; returns Promise<SpinResult>
+wheelRef.current.reset()          // reset to initial rotation angle
+wheelRef.current.stop()           // cancel the current animation
+wheelRef.current.isSpinning()     // returns true if a spin is in progress
 ```
 
 ## Controlling the Winner
@@ -115,6 +181,26 @@ wheelRef.current?.spin({ winnerId: "gift" });
 
 // Force a specific winner by index
 wheelRef.current?.spin({ winnerIndex: 2 });
+
+// Custom duration and easing
+wheelRef.current?.spin({ durationMs: 4000, easing: "outExpo" });
+```
+
+### SpinRequest options
+
+```ts
+type SpinRequest = {
+  winnerId?: string;
+  winnerIndex?: number;
+  random?: {
+    seed?: number | string;
+    strategy?: "uniform" | "weighted";
+  };
+  durationMs?: number;
+  minRounds?: number;
+  maxRounds?: number;
+  easing?: "outCubic" | "outQuart" | "outExpo" | "custom";
+};
 ```
 
 ## Segments
@@ -122,26 +208,38 @@ wheelRef.current?.spin({ winnerIndex: 2 });
 ```ts
 type WheelSegment<TMeta = unknown> = {
   id: string;          // unique identifier
-  label: string;       // display text
+  label: string;       // display text (auto-wrapped to 2 lines, font auto-scales to fit)
   weight?: number;     // relative probability (default 1)
   color?: string;      // segment fill color
   textColor?: string;  // label color
   metadata?: TMeta;    // your custom data, returned in SpinResult
-  disabled?: boolean;  // excluded from winner selection
+  disabled?: boolean;  // excluded from winner selection, rendered at reduced opacity
 };
 ```
 
-## Confetti Options
+## Text Placement
 
-Pass `confettiOnWin` as `true` for defaults, or pass an options object:
+Labels are positioned at ~52% of the wheel radius (mid-slice) with no rotation — they stay horizontal and rotate naturally with the wheel. Font size scales down automatically so longer labels always fit within their slice boundary.
 
-```ts
-confettiOnWin={{
-  durationMs: 1800,   // animation duration
-  pieceCount: 44,     // number of pieces
-  size: 8,            // base piece size in px
-  colors: ["#FFD166", "#EF476F", "#06D6A0"],
-}}
+- Long labels are auto-wrapped to a maximum of 2 lines
+- Overflow is truncated with an ellipsis (`…`)
+- A 62% chord safe-zone prevents text from touching segment dividers
+
+## TypeScript
+
+All props, events, and ref methods are fully typed. Pass a generic `TMeta` to type the `metadata` field on segments and access it in `SpinResult`:
+
+```tsx
+type Reward = { coins: number };
+
+const segments: WheelSegment<Reward>[] = [
+  { id: "big", label: "Jackpot", metadata: { coins: 1000 } },
+];
+
+<SpinWheel<Reward>
+  segments={segments}
+  onSpinEnd={(e) => console.log(e.winner.metadata?.coins)}
+/>
 ```
 
 ## License
