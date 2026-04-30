@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write   # needed to create GitHub Release
-  id-token: write   # required for trusted publishing with npm
 
 jobs:
   release:
@@ -56,8 +55,10 @@ jobs:
             exit 1
           fi
 
-      - name: Publish to npm (using trusted publishing)
+      - name: Publish to npm
         run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
