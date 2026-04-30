@@ -5,6 +5,7 @@ export type {
   SpinStartEvent,
   SpinWheelProps,
   SpinWheelRef,
+  WheelTheme,
   WinnerConfettiOptions,
   WheelError,
 } from "./types";

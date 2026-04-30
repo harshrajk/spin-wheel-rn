@@ -8,4 +8,5 @@ export type {
 	SpinWheelRef,
 	WinnerConfettiOptions,
 	WheelError,
+	WheelTheme,
 } from "./components/types";

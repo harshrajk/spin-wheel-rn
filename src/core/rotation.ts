@@ -1,4 +1,5 @@
 import { buildSectorGeometry, normalizeAngleDeg, pointerAngleDeg } from "./geometry";
+import { createSeededRng } from "./rng";
 import type { PointerPosition, RotationPlan, SpinRequest, WheelSegment } from "./types";
 
 function clamp(value: number, min: number, max: number): number {
@@ -8,7 +9,11 @@ function clamp(value: number, min: number, max: number): number {
 function chooseRounds(request: SpinRequest): number {
   const minRounds = request.minRounds ?? 4;
   const maxRounds = request.maxRounds ?? 8;
-  return clamp(Math.round((minRounds + maxRounds) / 2), minRounds, maxRounds);
+  if (minRounds === maxRounds) {
+    return minRounds;
+  }
+  const rng = createSeededRng(request.random?.seed);
+  return clamp(Math.floor(rng() * (maxRounds - minRounds + 1)) + minRounds, minRounds, maxRounds);
 }
 
 export function planRotation<TMeta>(args: {
@@ -17,6 +22,7 @@ export function planRotation<TMeta>(args: {
   currentAngleDeg: number;
   pointerPosition?: PointerPosition;
   request?: SpinRequest;
+  direction?: "clockwise" | "counterclockwise";
 }): RotationPlan {
   const {
     segments,
@@ -24,6 +30,7 @@ export function planRotation<TMeta>(args: {
     currentAngleDeg,
     pointerPosition = "top",
     request = {},
+    direction = "clockwise",
   } = args;
 
   const sectors = buildSectorGeometry(segments);
@@ -35,7 +42,15 @@ export function planRotation<TMeta>(args: {
   const distanceToFinal = normalizeAngleDeg(finalNormalized - normalizedCurrent);
 
   const rounds = chooseRounds(request);
-  const deltaDeg = rounds * 360 + distanceToFinal;
+
+  let deltaDeg: number;
+  if (direction === "counterclockwise") {
+    const ccwDistance = distanceToFinal > 0 ? 360 - distanceToFinal : 0;
+    deltaDeg = -(rounds * 360 + ccwDistance);
+  } else {
+    deltaDeg = rounds * 360 + distanceToFinal;
+  }
+
   const durationMs = request.durationMs ?? 4500;
 
   return {
