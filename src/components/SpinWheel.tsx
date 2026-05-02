@@ -387,6 +387,7 @@ const SpinWheelInner = <TMeta,>(
     allowGestureSpin = true,
     flickEnabled,
     lockWhileSpinning = true,
+    spinDirection = "clockwise",
     segmentStrokeColor,
     segmentStrokeWidth,
     labelFontSize,
@@ -394,7 +395,6 @@ const SpinWheelInner = <TMeta,>(
     disabledSegmentOpacity,
     outerBorderColor,
     outerBorderWidth,
-    spinDirection = "clockwise",
     idleRotationSpeed,
     hapticFeedback,
     customEasing,
@@ -490,6 +490,7 @@ const SpinWheelInner = <TMeta,>(
 
   const handleSpinComplete = useCallback(
     (winnerIndex: number, finalAngleDeg: number, durationMs: number) => {
+      rotation.value = ((finalAngleDeg % 360) + 360) % 360;
       const result: SpinResult<TMeta> = {
         winner: segments[winnerIndex],
         winnerIndex,
@@ -513,7 +514,7 @@ const SpinWheelInner = <TMeta,>(
       pointerScale.value = 1;
       currentSegmentIndex.value = -1;
 
-      if (confettiConfig) {
+      if (confettiConfig && !segments[winnerIndex]?.disableConfetti) {
         setConfettiVisible(true);
         cancelAnimation(confettiProgress);
         confettiProgress.value = 0;
@@ -529,7 +530,7 @@ const SpinWheelInner = <TMeta,>(
       );
       onSpinEnd?.({ ...result, timestamp: Date.now() });
     },
-    [confettiConfig, confettiProgress, isSpinning, onSpinEnd, segments]
+    [confettiConfig, confettiProgress, isSpinning, onSpinEnd, rotation, segments]
   );
 
   const emitError = useCallback(
@@ -543,6 +544,7 @@ const SpinWheelInner = <TMeta,>(
 
   const spin = useCallback(
     (request: SpinRequest = {}) => {
+      cancelAnimation(rotation);
       if (disabled) {
         return Promise.reject(new Error("Spin wheel is disabled."));
       }
@@ -571,7 +573,7 @@ const SpinWheelInner = <TMeta,>(
             currentAngleDeg: rotation.value,
             pointerPosition,
             request,
-            direction: spinDirection,
+            direction: request.direction ?? spinDirection,
           });
 
           pendingSpinResolveRef.current = resolve;
@@ -589,7 +591,7 @@ const SpinWheelInner = <TMeta,>(
                 return;
               }
               isSpinning.value = false;
-              runOnJS(handleSpinComplete)(winnerIndex, plan.toDeg, plan.durationMs);
+              runOnJS(handleSpinComplete)(winnerIndex, ((plan.toDeg % 360) + 360) % 360, plan.durationMs);
             }
           );
         } catch (err) {
@@ -613,8 +615,8 @@ const SpinWheelInner = <TMeta,>(
       segments,
       handleSpinComplete,
       isSpinning,
-      spinDirection,
       customEasing,
+      spinDirection,
     ]
   );
 
@@ -652,25 +654,7 @@ const SpinWheelInner = <TMeta,>(
       cancelAnimation(rotation);
 
       const currentAngle = rotation.value;
-      const segCount = segments.length;
-      const sweep = 360 / segCount;
-      const normalizedAngle = ((currentAngle % 360) + 360) % 360;
-      const pDeg =
-        pointerPosition === "right" ? 0
-        : pointerPosition === "bottom" ? 90
-        : pointerPosition === "left" ? 180
-        : 270;
-      const relDeg = ((pDeg - normalizedAngle) % 360 + 360) % 360;
-      let winnerIndex = Math.floor(relDeg / sweep) % segCount;
-
-      if (segments[winnerIndex]?.disabled) {
-        for (let offset = 1; offset < segCount; offset++) {
-          const next = (winnerIndex + offset) % segCount;
-          if (!segments[next]?.disabled) { winnerIndex = next; break; }
-          const prev = ((winnerIndex - offset) % segCount + segCount) % segCount;
-          if (!segments[prev]?.disabled) { winnerIndex = prev; break; }
-        }
-      }
+      const winnerIndex = resolveWinnerIndex(segments as WheelSegment[], {});
 
       try {
         const plan = planRotation({
@@ -691,7 +675,7 @@ const SpinWheelInner = <TMeta,>(
               return;
             }
             isSpinning.value = false;
-            runOnJS(handleSpinComplete)(winnerIndex, plan.toDeg, plan.durationMs);
+            runOnJS(handleSpinComplete)(winnerIndex, ((plan.toDeg % 360) + 360) % 360, plan.durationMs);
           }
         );
       } catch {
@@ -736,10 +720,17 @@ const SpinWheelInner = <TMeta,>(
         return;
       }
 
+      // Determine gesture direction via cross product of (touch − center) × velocity.
+      // In screen coordinates (Y down), crossZ > 0 means clockwise.
+      const cx = radius;
+      const cy = radius;
+      const crossZ = (event.x - cx) * event.velocityY - (event.y - cy) * event.velocityX;
+      const gestureDirection: "clockwise" | "counterclockwise" = crossZ >= 0 ? "clockwise" : "counterclockwise";
+
       const durationMs = Math.max(2200, Math.min(5000, 5500 - velocity));
-      runOnJS(spin)({ durationMs });
+      runOnJS(spin)({ durationMs, direction: gestureDirection });
     });
-  }, [disabled, isSpinning, lockWhileSpinning, shouldAllowGesture, spin]);
+  }, [disabled, isSpinning, lockWhileSpinning, radius, shouldAllowGesture, spin]);
 
   // ── Segment-crossing reaction: onSegmentChange, haptics, pointer A / C / D ──
   const segCount = segments.length;
@@ -771,13 +762,13 @@ const SpinWheelInner = <TMeta,>(
           const speedDeg = previous !== null ? Math.abs(current - previous) : 15;
           const deflectDeg = Math.max(8, Math.min(22, 22 - speedDeg * 0.4));
           // A: speed-adaptive spring deflect
-          pointerDeflection.value = -deflectDeg;
-          pointerDeflection.value = withSpring(0, { damping: 12, stiffness: 400 });
+          pointerDeflection.value = deflectDeg;          // forward poke (was -deflectDeg)
+          pointerDeflection.value = withSpring(0, { damping: 18, stiffness: 500 });
           // C: scale pulse on tick
           pointerScale.value = 1.25;
-          pointerScale.value = withSpring(1, { damping: 14, stiffness: 380 });
+          pointerScale.value = withSpring(1, { damping: 18, stiffness: 500 });
           // D: aerodynamic lean in spin direction
-          const dir = spinDirection === "counterclockwise" ? -1 : 1;
+          const dir = 1; // always lean forward; direction is resolved per-spin
           const lean = Math.min(12, speedDeg * 0.5) * dir;
           pointerLean.value = withTiming(lean, { duration: 80 });
         }
@@ -839,10 +830,12 @@ const SpinWheelInner = <TMeta,>(
     return { pointerPositionStyle: { top: -4, left: size / 2 - 10 } as ViewStyle, pointerBaseRotationDeg: 0 };
   }, [pointerPosition, size]);
 
+  const TIP_OFFSET = 14; // px from view center to pointer contact point
   const pointerAnimatedStyle = useAnimatedStyle<ViewStyle>(() => {
-    const totalRotation = pointerBaseRotationDeg + pointerDeflection.value + pointerLean.value;
     const transform: NonNullable<ViewStyle["transform"]> = [
-      { rotate: `${totalRotation}deg` },
+      { translateY: -TIP_OFFSET },
+      { rotate: `${pointerBaseRotationDeg + pointerDeflection.value + pointerLean.value}deg` },
+      { translateY: TIP_OFFSET },
       { scale: pointerScale.value },
     ];
     return { transform };
@@ -857,24 +850,31 @@ const SpinWheelInner = <TMeta,>(
           <G>
             {sectorGeometry.map((sector) => {
               const baseFontSize = labelFontSize ?? 12;
-              // Position at ~52% of the available radius band — keeps text well away from outer edge
-              const labelRadius = innerRadius > 0
-                ? innerRadius + (radius - innerRadius) * 0.52
-                : radius * 0.52;
+              // Position at 58% of the available radius band (single-line) or 50% (multi-line)
+              // to keep wrapped labels away from the outer wheel boundary.
+              const labelRadius = innerRadius + (radius - innerRadius) * 0.58;
               // Chord width at this radius for the slice's sweep angle
               const halfSweepRad = ((sector.sweepDeg / 2) * Math.PI) / 180;
               const chordWidth = 2 * labelRadius * Math.sin(halfSweepRad);
-              // Use 62% of chord as safe zone — leaves clear margin from sector dividers
-              const safeWidth = Math.max(16, chordWidth * 0.62);
-              // Max chars per line: use 0.60 as char-width multiplier (accurate for bold fonts)
-              const charWidth = baseFontSize * 0.60;
+              // Use 72% of chord as safe zone — leaves clear margin from sector dividers
+              const safeWidth = Math.max(16, chordWidth * 0.72);
+              // Max chars per line: use 0.68 as char-width multiplier (accurate for bold fonts)
+              const charWidth = baseFontSize * 0.68;
               const maxCharsPerLine = Math.max(3, Math.floor(safeWidth / charWidth));
-              const labelText = wrapLabelText(String(sector.segment.label), maxCharsPerLine);
+              const rawLabel = String(sector.segment.label);
+              // Prefer single-line rendering when the label fits at ≥ minimum font size.
+              // This avoids wrapping short labels (e.g. "15% OFF") in narrow sectors when a
+              // slightly smaller font would display them comfortably without a line break.
+              const MIN_LABEL_FONT = 7;
+              const rawLineWidth = rawLabel.replace(/\n/g, " ").length * charWidth;
+              const singleLineFontSize = Math.floor(baseFontSize * Math.min(1, safeWidth / rawLineWidth));
+              const canFitSingleLine = !rawLabel.includes("\n") && singleLineFontSize >= MIN_LABEL_FONT;
+              const labelText = canFitSingleLine ? rawLabel : wrapLabelText(rawLabel, maxCharsPerLine);
               const labelMetrics = getLabelMetrics(labelText);
               // Scale font down if the longest line still overflows safe width
-              const estimatedWidth = labelMetrics.longestLineChars * baseFontSize * 0.60;
+              const estimatedWidth = labelMetrics.longestLineChars * baseFontSize * 0.68;
               const widthScale = Math.min(1, safeWidth / estimatedWidth);
-              const resolvedFontSize = clamp(Math.floor(baseFontSize * widthScale), 7, baseFontSize);
+              const resolvedFontSize = clamp(Math.floor(baseFontSize * widthScale), MIN_LABEL_FONT, baseFontSize);
               const path = buildSectorPath(
                 radius,
                 radius,
@@ -884,7 +884,16 @@ const SpinWheelInner = <TMeta,>(
                 innerRadius
               );
 
-              const labelPoint = polarToCartesian(radius, radius, labelRadius, sector.centerDeg);
+              // Actual (x, y) position of the label along the sector bisector.
+              // Multi-line labels are pulled 8% inward so the text block stays clear of the outer edge.
+              const placementRatio = labelMetrics.lineCount > 1 ? 0.50 : 0.58;
+              const placementRadius = innerRadius + (radius - innerRadius) * placementRatio;
+              const labelPoint = polarToCartesian(radius, radius, placementRadius, sector.centerDeg);
+              // Rotate text around its own position so it reads radially outward.
+              // Left half (90°–270°) gets an extra 180° flip to stay legible.
+              const isLeftHalf = sector.centerDeg > 90 && sector.centerDeg < 270;
+              const textRotation = isLeftHalf ? sector.centerDeg + 180 : sector.centerDeg;
+
               const labelCtx: SegmentLabelContext<TMeta> = {
                 segment: sector.segment as WheelSegment<TMeta>,
                 index: sector.index,
@@ -902,14 +911,16 @@ const SpinWheelInner = <TMeta,>(
                     strokeWidth={segmentStrokeWidth ?? themeConfig?.segmentStrokeW ?? 2}
                   />
                   {!renderSegmentLabel ? (
-                    <SectorLabel
-                      x={labelPoint.x}
-                      y={labelPoint.y}
-                      text={labelText}
-                      fill={sector.segment.textColor ?? themeConfig?.defaultLabelColor ?? "#1A1A1A"}
-                      fontSize={resolvedFontSize}
-                      fontWeight={labelFontWeight ?? "700"}
-                    />
+                    <G transform={`rotate(${textRotation}, ${labelPoint.x}, ${labelPoint.y})`}>
+                      <SectorLabel
+                        x={labelPoint.x}
+                        y={labelPoint.y}
+                        text={labelText}
+                        fill={sector.segment.textColor ?? themeConfig?.defaultLabelColor ?? "#1A1A1A"}
+                        fontSize={resolvedFontSize}
+                        fontWeight={labelFontWeight ?? "700"}
+                      />
+                    </G>
                   ) : (
                     <G>
                       {/* Custom label rendering can be projected by parent via overlay components. */}

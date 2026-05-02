@@ -6,6 +6,8 @@ export type WheelSegment<TMeta = unknown> = {
   textColor?: string;
   metadata?: TMeta;
   disabled?: boolean;
+  /** When true, winning this segment will not trigger the confetti animation. */
+  disableConfetti?: boolean;
 };
 
 export type SpinRequest = {
@@ -19,6 +21,8 @@ export type SpinRequest = {
   minRounds?: number;
   maxRounds?: number;
   easing?: "outCubic" | "outQuart" | "outExpo" | "custom";
+  /** Override the spin direction for this single request. Takes precedence over the `spinDirection` prop. */
+  direction?: "clockwise" | "counterclockwise";
 };
 
 export type SpinResult<TMeta = unknown> = {

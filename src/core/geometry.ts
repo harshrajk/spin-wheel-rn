@@ -8,21 +8,23 @@ export function normalizeAngleDeg(angle: number): number {
 export function buildSectorGeometry<TMeta>(
   segments: WheelSegment<TMeta>[]
 ): SectorGeometry<TMeta>[] {
-  const sweep = 360 / segments.length;
+  const totalWeight = segments.reduce((sum, s) => sum + (s.weight ?? 1), 0);
+  let startDeg = 0;
 
   return segments.map((segment, index) => {
-    const startDeg = index * sweep;
-    const endDeg = startDeg + sweep;
-    const centerDeg = startDeg + sweep / 2;
-
-    return {
+    const sweepDeg = ((segment.weight ?? 1) / totalWeight) * 360;
+    const endDeg = startDeg + sweepDeg;
+    const centerDeg = startDeg + sweepDeg / 2;
+    const geo: SectorGeometry<TMeta> = {
       segment,
       index,
       startDeg,
       endDeg,
       centerDeg,
-      sweepDeg: sweep,
+      sweepDeg,
     };
+    startDeg = endDeg;
+    return geo;
   });
 }
 

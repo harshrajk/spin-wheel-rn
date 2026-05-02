@@ -16,7 +16,7 @@ const themedSegments: WheelSegment[] = [
   { id: "s1", label: "10% OFF", weight: 4 },
   { id: "s2", label: "Free\nShipping", weight: 3 },
   { id: "s3", label: "20% OFF", weight: 2 },
-  { id: "s4", label: "Better Luck\nNext Time", weight: 5 },
+  { id: "s4", label: "Better Luck\nNext Time", weight: 5, disableConfetti: true },
   { id: "s5", label: "5% OFF", weight: 3 },
   { id: "s6", label: "15% OFF", weight: 2 },
 ];
@@ -42,7 +42,6 @@ export default function App() {
   const [lastWinner, setLastWinner] = useState<string | null>(null);
   const [currentSegment, setCurrentSegment] = useState<string | null>(null);
   const [activeTheme, setActiveTheme] = useState<WheelTheme | undefined>("minimal");
-  const [direction, setDirection] = useState<"clockwise" | "counterclockwise">("clockwise");
   const [haptics, setHaptics] = useState(false);
   const [bounceEnabled, setBounceEnabled] = useState(true);
 
@@ -92,13 +91,6 @@ export default function App() {
           {/* Toggles */}
           <View style={styles.toggleRow}>
             <View style={styles.toggle}>
-              <Text style={[styles.toggleLabel, { color: subColor }]}>CCW</Text>
-              <Switch
-                value={direction === "counterclockwise"}
-                onValueChange={(v) => setDirection(v ? "counterclockwise" : "clockwise")}
-              />
-            </View>
-            <View style={styles.toggle}>
               <Text style={[styles.toggleLabel, { color: subColor }]}>Haptics</Text>
               <Switch value={haptics} onValueChange={setHaptics} />
             </View>
@@ -125,7 +117,6 @@ export default function App() {
               allowGestureSpin
               flickEnabled
               confettiOnWin
-              spinDirection={direction}
               hapticFeedback={haptics}
               pointerBounceEnabled={bounceEnabled}
               labelFontSize={11}
