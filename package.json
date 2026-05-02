@@ -35,6 +35,10 @@
     "ios",
     "android"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harshrajk/spin-wheel-rn.git"
+  },
   "license": "MIT",
   "peerDependencies": {
     "react": ">=18",
